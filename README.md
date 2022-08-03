@@ -148,7 +148,6 @@ $ mkdir obj-llvm
 $ cd obj-llvm
 $ CC=wllvm ../configure --disable-nls CFLAGS="-O0 -Xclang -disable-O0-optnone -fno-discard-value-names -D__NO_STRING_INLINES  -D_FORTIFY_SOURCE=0 -U__OPTIMIZE__"
 $ make
-$ make -C src arch hostname
 ```
 Note: `CFLAGS` specifies the compilation falgs for compiling coreutils. We use ```-O0 -Xclang -disable-O0-optnone``` to disable optimizations. You can also use ```-O1 -Xclang -disable-llvm-passes``` to disable optimizations, the generated bitcode under this option is more suited for optimization later (in linking stage).
 
@@ -182,7 +181,7 @@ Then execute the linked IR. Since KLEE has an internal strategies for executing 
 ```bash
 klee --switch-type=simple echo_klee.ll --sym-stdout --sym-arg 8
 ```
-KLEE should explore 4971 paths for the above command.
+KLEE should explore 4971 paths for the above command. For more details on running coreutils programs on KLEE, please refer to [Testing Coreutils](https://klee.github.io/tutorials/testing-coreutils/).
 
 - LLSC with POSIX
 
