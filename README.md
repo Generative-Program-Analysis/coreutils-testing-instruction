@@ -1,69 +1,85 @@
-Coreutils-testpipeline
+Testing Coreutils
 ======================
 
-This manual contains detailed instruction on building coreutils test pipeline
+This manual contains detailed instructions on testing GNU's Coreutils.
+The testing pipeline depends on *LLVM 11*.
 
-Note: We use LLVM 11 for the entire test-pipeline build
-=======================================================
+### Step 1: Building the file system linker
 
-# Step 1: Building filesystem linker
+We need a lightweight linker to link the Coreutils program with the uClibc library
+and the POSIX file system. The linker's implementation extracts all linking and
+code optimization related code from KLEE.
 
-We need a lightweight linker to link the coreutils program with uclibc library and POSIX filesystem. The linker extracts all linking and code optimization related code from KLEE.
-## Dependencies
+#### Install dependencies
+
+Install the basic dependencies:
 ```bash
 $ sudo apt-get install build-essential cmake file g++-multilib gcc-multilib git python3-pip
 ```
-### Install wllvm to make it easier to compile programs to LLVM bitcode
+
+Install `wllvm` to compile programs to LLVM whole-program bitcode:
 ```bash
 $ sudo pip3 install wllvm
 ```
-### Installing LLVM-11
-The linker like its origin KLEE is based on LLVM. We use LLVM-11 tool chain for build.
 
-If you are using a recent Ubuntu (e.g. 21.10) use the LLVM packages provided by LLVM itself.
+If you are using a recent Ubuntu distribution (e.g. 21.10), install the LLVM-11
+packages provided from the package manager.
 ```bash
 $ sudo apt-get install clang-11 llvm-11 llvm-11-dev llvm-11-tools
 ```
-otherwise, you can build LLVM-11 from source, please refer to [LLVM Getting Started](https://releases.llvm.org/11.0.1/docs/GettingStarted.html)
 
-## Building
+Otherwise, you can [build LLVM-11 from source](https://releases.llvm.org/11.0.1/docs/GettingStarted.html).
+
+#### Build the preprocessor `fs-linker`
+
 1. First, clone the linker repo.
 ```bash
 $ git clone https://github.com/Generative-Program-Analysis/fs-linker.git
 $ cd fs-linker
 ```
+
 2. Configure the linker
 ```bash
 $ mkdir build
 $ cd build
-$ cmake -DLLVM_CONFIG_BINARY=<ABSOLUTE_PATH_TO_LLVM_CONFIG_11_BINARY>  -DCMAKE_INSTALL_PREFIX=<YOUR_INSTALL_PATH_PREFIX>  -DCMAKE_BUILD_TYPE=<Release/Debug> ..
+$ cmake -DLLVM_CONFIG_BINARY=<ABSOLUTE_PATH_TO_LLVM_CONFIG_11_BINARY> -DCMAKE_INSTALL_PREFIX=<YOUR_INSTALL_PATH_PREFIX> -DCMAKE_BUILD_TYPE=<Release/Debug> ..
 ```
 Note: if you do not wish to install the linker binary, please omit the `-DCMAKE_INSTALL_PREFIX` option.
 
 3. Build the linker
 ```bash
-$ make install / make
+$ make # or make install
 ```
-The generated linker binary `fs-linker` will be generated under `build/bin`, and `<YOUR_INSTALL_PATH_PREFIX>/bin` (if user specifies `-DCMAKE_INSTALL_PREFIX`).
+The linker binary `fs-linker` will be generated under `build/bin` and `<YOUR_INSTALL_PATH_PREFIX>/bin`
+(if user specifies `-DCMAKE_INSTALL_PREFIX`).
 
-## Usage
-This linker can link coreutils programs with KLEE's POSIX filesystem (Step 2) and KLEE's uClibc library (Step 3) and perform some code optimization and transformation.
+#### Usage
 
-Below are some basic options:
-- `--posix-path=<PATH_TO_POSIX_ARCHIVE>`   : this option should be the absolute path of your POSIX filesystem's archive. If you omit this option, the source program will not be linked to KLEE's POSIX filesystem but use LLSC's internal filesystem.
-- `--uclibc-path=<PATH_TO_UCLIBC_ARCHIVE>` : this option should be the absolute path of your uClibc library's archive. This option is required if you are linking coreutils programs.
-- `--switch-type=simple`                   : this option will lower the switch inst in the input IR to a chained branch instructions.
+The linker combines Coreutils programs with KLEE's POSIX file system (Step 2)
+and the uClibc library (Step 3) into a single LLVM IR program.
+The linker also performs source code optimization and transformation
+on the combined program.
+
+Below are some basic options to use `fs-linker`:
+- `--posix-path=<PATH_TO_POSIX_ARCHIVE>`   : this option should be the absolute path of the POSIX file system's archive. If you omit this option, the source program will not be linked with KLEE's POSIX file system but use LLSC's internal file system.
+- `--uclibc-path=<PATH_TO_UCLIBC_ARCHIVE>` : this option should be the absolute path of the uClibc library's archive. This option is required if you are linking Coreutils programs.
+- `--switch-type=simple`                   : this option will lower the switch instructions to a chain of branch instructions.
 - `--optimize`                             : optimize the code using a series of pre-selected optimization passes.
-- `-o`                                     : this option specify the name of the output LLVM IR.
-- To see all options run``` fs-linker --help```
+- `-o`                                     : this option specifies the name of the output LLVM IR program.
+- To see all options, run ```fs-linker --help```
 
-### Sample usage
+##### Sample usage
+
 ```bash
-$ fs-linker --posix-path=${POSIX_SOURCE_DIR}/build/runtime/lib/libllscRuntimePOSIX64.bca --uclibc-path=${UCLIBC_SOURCE_DIR}/lib/libc.a  --switch-type=simple   ./echo.bc -o echo_linked.ll
+$ fs-linker --posix-path=${POSIX_SOURCE_DIR}/build/runtime/lib/libllscRuntimePOSIX64.bca \
+            --uclibc-path=${UCLIBC_SOURCE_DIR}/lib/libc.a \
+            --switch-type=simple \
+            ./echo.bc -o echo_linked.ll
 ```
-The command above link input program `echo.bc` with POSIX filesystem (with LLSC's external function) and uClibc library, lower the switch instructions and output the linked IR into `echo_linked.ll`.
 
-
+The command above links input program `echo.bc` with POSIX file system
+and the uClibc library, lowers switch instructions
+and produces the linked LLVM IR program into `echo_linked.ll`.
 
 # Step 2: Building POSIX filesystem
 This is a modified version of KLEE's POSIX filesystem in order to run on both KLEE and our engine.
