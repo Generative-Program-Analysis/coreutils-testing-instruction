@@ -42,7 +42,9 @@ $ cd fs-linker
 ```bash
 $ mkdir build
 $ cd build
-$ cmake -DLLVM_CONFIG_BINARY=<ABSOLUTE_PATH_TO_LLVM_CONFIG_11_BINARY> -DCMAKE_INSTALL_PREFIX=<YOUR_INSTALL_PATH_PREFIX> -DCMAKE_BUILD_TYPE=<Release/Debug> ..
+$ cmake -DLLVM_CONFIG_BINARY=<ABSOLUTE_PATH_TO_LLVM_CONFIG_11_BINARY> \
+        -DCMAKE_INSTALL_PREFIX=<YOUR_INSTALL_PATH_PREFIX> \
+        -DCMAKE_BUILD_TYPE=<Release/Debug> ..
 ```
 Note: if you do not wish to install the linker binary, please omit the `-DCMAKE_INSTALL_PREFIX` option.
 
@@ -81,32 +83,45 @@ The command above links input program `echo.bc` with POSIX file system
 and the uClibc library, lowers switch instructions
 and produces the linked LLVM IR program into `echo_linked.ll`.
 
-# Step 2: Building POSIX filesystem
-This is a modified version of KLEE's POSIX filesystem in order to run on both KLEE and our engine.
-1. First, clone the posix-runtime repo.
+### Step 2: Building the POSIX file system
+
+This step builds a modified version of KLEE's POSIX file system model in order
+to test Coreutils programs (or any programs using POSIX file system APIs) with
+both KLEE and LLSC.
+
+1. First, clone the `posix-runtime` repository:
 ```bash
 $ git clone https://github.com/Generative-Program-Analysis/posix-runtime.git
 $ cd posix-runtime
 ```
-2. Configure the posix filesystem
+
+2. Configure the POSIX file system
 ```bash
 $ mkdir build
 $ cd build
-$ cmake -DLLVM_CONFIG_BINARY=<ABSOLUTE_PATH_TO_LLVM_CONFIG_11_BINARY>  -DLLVMCC=<ABSOLUTE_PATH_TO_CLANG_11_BINARY> -DLLVMCXX=<ABSOLUTE_PATH_TO_CLANG++_11_BINARY>  -DCMAKE_INSTALL_PREFIX=<YOUR_INSTALL_PATH_PREFIX>  -DLLSC_HEADER_DIR=<DIR_TO_YOUR_LLSCCLIENT_HEADER> -DKLEE_HEADER_DIR=<DIR_TO_YOUR_KLEE_HEADER> -DRUNTIME_CFLAGS="-O0  -fno-discard-value-names"  ..
+$ cmake -DLLVM_CONFIG_BINARY=<ABSOLUTE_PATH_TO_LLVM_CONFIG_11_BINARY> \
+        -DLLVMCC=<ABSOLUTE_PATH_TO_CLANG_11_BINARY> \
+        -DLLVMCXX=<ABSOLUTE_PATH_TO_CLANG++_11_BINARY> \
+        -DCMAKE_INSTALL_PREFIX=<YOUR_INSTALL_PATH_PREFIX> \
+        -DLLSC_HEADER_DIR=<DIR_TO_YOUR_LLSCCLIENT_HEADER> \
+        -DKLEE_HEADER_DIR=<DIR_TO_YOUR_KLEE_HEADER> \
+        -DRUNTIME_CFLAGS="-O0 -fno-discard-value-names" ..
 ```
-Note1: if you do not wish to install the posix filesystem library, please omit the `-DCMAKE_INSTALL_PREFIX` option.
+Note: if you do not wish to install the posix file system library, please omit the `-DCMAKE_INSTALL_PREFIX` option.
 
-Note2: we will be building posix flesystem for both KLEE and our engine LLSC. So user should provide the engine's external api header,  `-DLLSC_HEADER_DIR` (the directory where `llsc_client.h` is located) and `-DKLEE_HEADER_DIR` (the directory where `klee.h` is located).
+Note: we will build the POSIX file system model for both KLEE and our engine LLSC. So the user should provide the engine's external API header file, i.e. `-DLLSC_HEADER_DIR` (the directory where `llsc_client.h` is located) and `-DKLEE_HEADER_DIR` (the directory where `klee.h` is located).
 
-Note3: we use `-DRUNTIME_CFLAGS` to pass optimization flags to the clang bitcode compiler. By default, we disable optimization by passing `-O0  -fno-discard-value-names`. If you wish to disable assert, you can pass `-DNDEBUG` in addition.
+Note: we use `-DRUNTIME_CFLAGS` to pass optimization flags to `clang`, which produces bitcode files of source programs.
+By default, we disable optimization by passing `-O0 -fno-discard-value-names`.
+If you wish to disable assertions, you can pass `-DNDEBUG` in addition.
 
-3. Build the posix runtime
+3. Build the POSIX runtime
 ```bash
-$ make install / make
+$ make # or make install
 ```
 The archived posix-filesystem `libkleeRuntimePOSIX64.bca` (for KLEE) and  `libllscRuntimePOSIX64.bca` (for LLSC) will be generated under `build/runtime/lib`, and `<YOUR_INSTALL_PATH_PREFIX>/lib` (if user specifies `-DCMAKE_INSTALL_PREFIX`).
 
-# Step 3: Building uClibc library
+### Step 3: Building the uClibc library
 1. First, clone the klee-uClibc repo.
 ```bash
 $ git clone https://github.com/Generative-Program-Analysis/klee-uclibc.git
