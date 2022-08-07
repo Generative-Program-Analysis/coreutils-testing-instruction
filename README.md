@@ -146,7 +146,7 @@ Note: we use `KLEE_CFLAGS` to pass additional compiler flags in the end, `-mlong
 
 The generated uClibc library archive is `lib/libc.a`.
 
-# Step 4: Building Coreutils programs
+### Step 4: Building Coreutils programs
 
 1. First, clone the Coreutils repository:
 
@@ -207,7 +207,7 @@ find . -executable -type f | xargs -I '{}' extract-bc '{}'
 cd ..
 ```
 
-# Step 5: Testing
+### Step 5: Testing
 
 After the last step, compiled native binary files (e.g. `echo`, `cat`) and their LLVM bitcode files (e.g. `echo.bc`, `cat.bc`) are located under `obl-llvm/src`.
 
