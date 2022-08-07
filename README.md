@@ -17,11 +17,6 @@ Install the basic dependencies:
 $ sudo apt-get install build-essential cmake file g++-multilib gcc-multilib git python3-pip
 ```
 
-Install `wllvm` to compile programs to LLVM whole-program bitcode:
-```bash
-$ sudo pip3 install wllvm
-```
-
 If you are using a recent Ubuntu distribution (e.g. 21.10), install the LLVM-11
 packages provided from the package manager.
 ```bash
@@ -122,38 +117,55 @@ $ make # or make install
 The archived posix-filesystem `libkleeRuntimePOSIX64.bca` (for KLEE) and  `libllscRuntimePOSIX64.bca` (for LLSC) will be generated under `build/runtime/lib`, and `<YOUR_INSTALL_PATH_PREFIX>/lib` (if user specifies `-DCMAKE_INSTALL_PREFIX`).
 
 ### Step 3: Building the uClibc library
-1. First, clone the klee-uClibc repo.
+
+1. First, clone the `klee-uclibc` repository:
+
 ```bash
 $ git clone https://github.com/Generative-Program-Analysis/klee-uclibc.git
 $ cd klee-uclibc
 $ git checkout evaluation_uclibc_version
 ```
-2. Configure the klee-uClibc library
+
+2. Configure the klee-uClibc library:
+
 ```bash
-$ ./configure --make-llvm-lib --with-cc <ABSOLUTE_PATH_TO_CLANG_11_BINARY> --with-llvm-config <ABSOLUTE_PATH_TO_LLVM_CONFIG_11_BINARY>
+$ ./configure --make-llvm-lib \
+              --with-cc <ABSOLUTE_PATH_TO_CLANG_11_BINARY> \
+              --with-llvm-config <ABSOLUTE_PATH_TO_LLVM_CONFIG_11_BINARY>
 ```
+
 Note: The assertions in uClibc library are disabled by default, you may add `--enable-assertions` option to enable assertions.
 
-3. Build the klee-uClibc
+3. Build the klee-uClibc:
+
 ```bash
-$ make KLEE_CFLAGS=" -fno-discard-value-names -mlong-double-64"
+$ make KLEE_CFLAGS="-fno-discard-value-names -mlong-double-64"
 ```
+
 Note: we use `KLEE_CFLAGS` to pass additional compiler flags in the end, `-mlong-double-64` is used to disable fp80 datatype.
 
 The generated uClibc library archive is `lib/libc.a`.
 
-# Step 4: Building coreutils program
-1. First, clone the coreutils repo.
+# Step 4: Building Coreutils programs
+
+1. First, clone the Coreutils repository:
+
 ```bash
 $ git clone git://git.sv.gnu.org/coreutils
 $ cd coreutils
 $ git checkout tags/v8.32 -b <branch_name>
 ```
-Note: we will be testing on coreutils v8.32 release
 
-2. `wllvm` setup
+Note: we will be testing on Coreutils v8.32 release.
 
-Coreutils programs need to be compiled into LLVM bitcode in order to be executed on KLEE and our engine. So we will need to use the previously installed `wllvm` (in Step 1) to compile both the native binary and LLVM bitcode.
+2. Install and setup `wllvm`:
+
+Coreutils programs need to be compiled into LLVM bitcode in order to be executed on KLEE and our engine.
+We also need to install `wllvm` to compile multiple modules of source code into a
+single LLVM whole-program bitcode file:
+```bash
+$ sudo pip3 install wllvm
+```
 
 To successfully execute `wllvm`, it is necessary to set several environment variables:
 
@@ -168,23 +180,26 @@ $ export LLVM_COMPILER_PATH=<YOUR_LLVM_BINARY_PATH>  // optional: can be set to 
 
 3. Build coreutils program
 
-### Dependencies
-Please refer to `README-prereq` under the root directory of coreutils to install the dependencies required for building coreutils.
+Please refer to `README-prereq` under the root directory of coreutils to
+install the dependencies required for building coreutils.
 
-Note: For coreutils v8.32, new Bison versions (>= v3.7) will cause error, please install older Bison version before building.
+Note: For coreutils v8.32, newer Bison versions (>= v3.7) will cause errors, please install older Bison version before building.
 
-### Building
+To compile coreutils:
 
 ```bash
 $ ./bootstrap
 $ mkdir obj-llvm
 $ cd obj-llvm
-$ CC=wllvm ../configure --disable-nls CFLAGS="-O0 -Xclang -disable-O0-optnone -fno-discard-value-names -D__NO_STRING_INLINES  -D_FORTIFY_SOURCE=0 -U__OPTIMIZE__"
+$ CC=wllvm ../configure \
+  --disable-nls \
+  CFLAGS="-O0 -Xclang -disable-O0-optnone -fno-discard-value-names -D__NO_STRING_INLINES -D_FORTIFY_SOURCE=0 -U__OPTIMIZE__"
 $ make
 ```
-Note: `CFLAGS` specifies the compilation falgs for compiling coreutils. We use ```-O0 -Xclang -disable-O0-optnone``` to disable optimizations. You can also use ```-O1 -Xclang -disable-llvm-passes``` to disable optimizations, the generated bitcode under this option is more suited for optimization later (in linking stage).
 
-Then we need to extract the LLVM bitcode using `extract-bc` (a `wllvm` utility).
+Note: `CFLAGS` specifies the flags for compiling Coreutils. We use `-O0 -Xclang -disable-O0-optnone` to disable more aggressive optimizations. You can also use `-O1 -Xclang -disable-llvm-passes` to enable some optimizations, and the generated bitcode under this option is more suited for optimization later (in the linking stage).
+
+Then we need to extract the LLVM bitcode using `extract-bc` (a `wllvm` utility):
 
 ```bash
 cd src
@@ -194,61 +209,81 @@ cd ..
 
 # Step 5: Testing
 
-The compiled native binary (echo, cat ...) and LLVM bitcode (echo.bc, cat.bc ...) will be located under `obl-llvm/src`.
+After the last step, compiled native binary files (e.g. `echo`, `cat`) and their LLVM bitcode files (e.g. `echo.bc`, `cat.bc`) are located under `obl-llvm/src`.
 
-For testing, we can create a separate folder under `obj-llvm`
+For testing, we can create a separate folder under `obj-llvm`:
 ```bash
 mkdir playground
 cd playground
 cp ../src/*.bc ./
 ```
-- KLEE
+
+- Using KLEE
 
 If we want to test the coreutils bitcode (for example echo) on KLEE.
 
-First refer to [build KLEE](https://klee.github.io/build-llvm11/) to build KLEE, then link the program with POSIX filesystem (with KLEE's external api) and uClibc library.
+First refer to [KLEE's document](https://klee.github.io/build-llvm11/) to build KLEE.
+Then using the `fs-linker` program to produce a single LLVM IR program
+containing the POSIX file system (with KLEE's external API) and the uClibc
+library.
+
+Using `echo` as example:
+
 ```bash
-fs-linker --posix-path=${dir_to_posix_archive}/libkleeRuntimePOSIX64.bca --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a  ./echo.bc -o echo_klee.ll
+fs-linker --posix-path=${dir_to_posix_archive}/libkleeRuntimePOSIX64.bca \
+          --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a \
+          ./echo.bc -o echo_klee.ll
 ```
-Then execute the linked IR. Since KLEE has an internal strategies for executing switch instruction which will cause the path number to be lower than our engine. We use `--switch-type=simple` to lower switch into branches to make sure that we can observe same path number for KLEE and our engine LLSC.
+
+Since we have already produced the program with the POSIX/uClibc library, we
+do not need to specify these options when running KLEE.
+We need to use `--switch-type=simple` to lower `switch` instructions into
+branches, to make sure that both KLEE and LLSC treats `switch` in the same way:
+
 ```bash
 klee --switch-type=simple echo_klee.ll --sym-stdout --sym-arg 8
 ```
-KLEE should explore 4971 paths for the above command. For more details on running coreutils programs on KLEE, please refer to [Testing Coreutils](https://klee.github.io/tutorials/testing-coreutils/).
 
-- LLSC with POSIX
+KLEE should explore 4971 paths after running the above command. For more details on testing Coreutils programs with KLEE, please refer to [KLEE's document](https://klee.github.io/tutorials/testing-coreutils/).
 
-If we want to test the coreutils bitcode (for example echo) on LLSC linked with POSIX filesystem.
+- Using LLSC with KLEE's POSIX model
 
-Link the program with POSIX filesystem (with LLSC's external api) and uClibc library.
+To test Coreutils bitcode programs using LLSC, we need to link the program with
+the POSIX file system (with LLSC's external API) and the uClibc library again using
+the `fs-linker` program:
 
 ```bash
-fs-linker --posix-path=${dir_to_posix_archive}/libllscRuntimePOSIX64.bca --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a --switch-type=simple ./echo.bc -o echo_linked.ll
+fs-linker --posix-path=${dir_to_posix_archive}/libllscRuntimePOSIX64.bca \
+          --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a \
+          --switch-type=simple \
+          ./echo.bc -o echo_linked.ll
 ```
 
-Then run the linked IR in LLSC with the following config in our engine
+Then run the linked IR in LLSC with the following Scala code in the engine:
 ```bash
 testLLSC(new ImpCPSLLSC, List(TestPrg(echo_linked, "echo_linked_posix", "@main", testcoreutil, Seq("--cons-indep","--argv=./echo.bc --sym-stdout --sym-arg 8"), nPath(4971)++status(0))))
 ```
 You should observe same path number 4971.
 
+- Using LLSC without POSIX
 
-- LLSC without POSIX
-
-If we want to test the coreutils bitcode (for example echo) on LLSC using the internal filesystem.
-
-Link the program with only uClibc library.
+To test Coreutils bitcode files using LLSC with its the internal file system,
+we only need to link the program with the uClibc library.
 
 ```bash
-fs-linker --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a --switch-type=simple ./echo.bc -o echo_llsc_linked.ll
+fs-linker --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a \
+          --switch-type=simple \
+          ./echo.bc -o echo_llsc_linked.ll
 ```
 
-Then run the linked IR in LLSC with the following config in our engine
+Then run the linked IR program with the following Scala code in the engine:
+
 ```bash
 testLLSC(new ImpCPSLLSC, List(TestPrg(echo_llsc_linked, "echo_llsc_linked", "@main", testcoreutil, Seq("--cons-indep","--argv=./echo.bc #{8}"), nPath(4971)++status(0))))
 ```
+
 You should observe same path number 4971.
 
-## Measuring coverage with gcov
+#### Measuring coverage with `gcov`
 
-This feature is still under development for our engine. Please refer to [Testing Coreutils](https://klee.github.io/tutorials/testing-coreutils/) about testing with gcov in KLEE.
+This feature is still under development for LLSC. Please refer to [Testing Coreutils](https://klee.github.io/tutorials/testing-coreutils/) about testing with `gcov` in KLEE.
