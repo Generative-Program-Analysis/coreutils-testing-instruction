@@ -183,7 +183,7 @@ $ export LLVM_COMPILER_PATH=<YOUR_LLVM_BINARY_PATH>  // optional: can be set to 
 Please refer to `README-prereq` under the root directory of coreutils to
 install the dependencies required for building coreutils.
 
-Note: For coreutils v8.32, newer Bison versions (>= v3.7) will cause errors, please install older Bison version before building.
+Note: For coreutils v8.32, newer Bison versions will cause errors, please install Bison version 3.5.1 before building.
 
 To compile coreutils:
 
