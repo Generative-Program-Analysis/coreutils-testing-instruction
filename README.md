@@ -266,8 +266,8 @@ sbt:SAI> runMain sai.llsc.RunLLSC <path-to-echo_linked.ll> --entrance=main --out
 
 And after running `make` under `llsc_gen/echo_linked_posix`, we can invoke the compiled executable file:
 ```
-# current directory sai/dev-clean
-cd llsc_gen/echo_linked_posix
+# current directory sai/dev-clean/llsc_gen/echo_linked_posix
+make
 ./echo_linked_posix --cons-indep --argv="./echo.bc --sym-stdout --sym-arg 8"
 ```
 
@@ -291,8 +291,8 @@ sbt:SAI> runMain sai.llsc.RunLLSC <path-to-echo_llsc_linked.ll> --entrance=main 
 
 And after running `make` under `llsc_gen/echo_llsc_fs`, we can invoke the compiled executable file:
 ```
-# current directory sai/dev-clean
-cd llsc_gen/echo_llsc_fs
+# current directory sai/dev-clean/llsc_gen/echo_llsc_fs
+make
 ./echo_llsc_fs --cons-indep --argv="./echo.bc #{8}"
 ```
 
