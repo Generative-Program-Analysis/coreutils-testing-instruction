@@ -259,10 +259,18 @@ fs-linker --posix-path=${dir_to_posix_archive}/libllscRuntimePOSIX64.bca \
           ./echo.bc -o echo_linked.ll
 ```
 
-Then run the linked IR in LLSC with the following Scala code in the engine:
-```bash
-testLLSC(new ImpCPSLLSC, List(TestPrg(echo_linked, "echo_linked_posix", "@main", testcoreutil, Seq("--cons-indep","--argv=./echo.bc --sym-stdout --sym-arg 8"), nPath(4971)++status(0))))
+Then we generate the symbolic-execution code for `echo_linked.ll`:
 ```
+sbt:SAI> runMain sai.llsc.RunLLSC <path-to-echo_linked.ll> --entrance=main --output=echo_linked_posix --use-argv
+```
+
+And after running `make` under `llsc_gen/echo_linked_posix`, we can invoke the compiled executable file:
+```
+# current directory sai/dev-clean
+cd llsc_gen/echo_linked_posix
+./echo_linked_posix --cons-indep --argv="./echo.bc --sym-stdout --sym-arg 8"
+```
+
 You should observe same path number 4971.
 
 - Using LLSC without POSIX
@@ -276,10 +284,16 @@ fs-linker --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a \
           ./echo.bc -o echo_llsc_linked.ll
 ```
 
-Then run the linked IR program with the following Scala code in the engine:
+Then we generate the symbolic-execution code for `echo_llsc_linked.ll`:
+```
+sbt:SAI> runMain sai.llsc.RunLLSC <path-to-echo_llsc_linked.ll> --entrance=main --output=echo_llsc_fs --use-argv
+```
 
-```bash
-testLLSC(new ImpCPSLLSC, List(TestPrg(echo_llsc_linked, "echo_llsc_linked", "@main", testcoreutil, Seq("--cons-indep","--argv=./echo.bc #{8}"), nPath(4971)++status(0))))
+And after running `make` under `llsc_gen/echo_llsc_fs`, we can invoke the compiled executable file:
+```
+# current directory sai/dev-clean
+cd llsc_gen/echo_llsc_fs
+./echo_llsc_fs --cons-indep --argv="./echo.bc #{8}"
 ```
 
 You should observe same path number 4971.
