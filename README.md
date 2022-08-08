@@ -259,7 +259,7 @@ fs-linker --posix-path=${dir_to_posix_archive}/libllscRuntimePOSIX64.bca \
           ./echo.bc -o echo_linked.ll
 ```
 
-Then we generate the symbolic-execution code for `echo_linked.ll`:
+Then we generate the symbolic-execution code for `echo_linked.ll` under the interactive `sbt` console:
 ```
 sbt:SAI> runMain sai.llsc.RunLLSC <path-to-echo_linked.ll> --entrance=main --output=echo_linked_posix --use-argv
 ```
@@ -284,7 +284,7 @@ fs-linker --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a \
           ./echo.bc -o echo_llsc_linked.ll
 ```
 
-Then we generate the symbolic-execution code for `echo_llsc_linked.ll`:
+Then we generate the symbolic-execution code for `echo_llsc_linked.ll` under the interactive `sbt` console:
 ```
 sbt:SAI> runMain sai.llsc.RunLLSC <path-to-echo_llsc_linked.ll> --entrance=main --output=echo_llsc_fs --use-argv
 ```
