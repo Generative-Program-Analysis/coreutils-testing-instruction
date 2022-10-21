@@ -58,7 +58,7 @@ The linker also performs source code optimization and transformation
 on the combined program.
 
 Below are some basic options to use `fs-linker`:
-- `--posix-path=<PATH_TO_POSIX_ARCHIVE>`   : this option should be the absolute path of the POSIX file system's archive. If you omit this option, the source program will not be linked with KLEE's POSIX file system but use LLSC's internal file system.
+- `--posix-path=<PATH_TO_POSIX_ARCHIVE>`   : this option should be the absolute path of the POSIX file system's archive. If you omit this option, the source program will not be linked with KLEE's POSIX file system but use GENSYM's internal file system.
 - `--uclibc-path=<PATH_TO_UCLIBC_ARCHIVE>` : this option should be the absolute path of the uClibc library's archive. This option is required if you are linking Coreutils programs.
 - `--switch-type=simple`                   : this option will lower the switch instructions to a chain of branch instructions.
 - `--optimize`                             : optimize the code using a series of pre-selected optimization passes.
@@ -68,7 +68,7 @@ Below are some basic options to use `fs-linker`:
 ##### Sample usage
 
 ```bash
-$ fs-linker --posix-path=${POSIX_SOURCE_DIR}/build/runtime/lib/libllscRuntimePOSIX64.bca \
+$ fs-linker --posix-path=${POSIX_SOURCE_DIR}/build/runtime/lib/libgensymRuntimePOSIX64.bca \
             --uclibc-path=${UCLIBC_SOURCE_DIR}/lib/libc.a \
             --switch-type=simple \
             ./echo.bc -o echo_linked.ll
@@ -82,7 +82,7 @@ and produces the linked LLVM IR program into `echo_linked.ll`.
 
 This step builds a modified version of KLEE's POSIX file system model in order
 to test Coreutils programs (or any programs using POSIX file system APIs) with
-both KLEE and LLSC.
+both KLEE and GENSYM.
 
 1. First, clone the `posix-runtime` repository:
 ```bash
@@ -98,13 +98,13 @@ $ cmake -DLLVM_CONFIG_BINARY=<ABSOLUTE_PATH_TO_LLVM_CONFIG_11_BINARY> \
         -DLLVMCC=<ABSOLUTE_PATH_TO_CLANG_11_BINARY> \
         -DLLVMCXX=<ABSOLUTE_PATH_TO_CLANG++_11_BINARY> \
         -DCMAKE_INSTALL_PREFIX=<YOUR_INSTALL_PATH_PREFIX> \
-        -DLLSC_HEADER_DIR=<DIR_TO_YOUR_LLSCCLIENT_HEADER> \
+        -DGENSYM_HEADER_DIR=<DIR_TO_YOUR_GENSYMCLIENT_HEADER> \
         -DKLEE_HEADER_DIR=<DIR_TO_YOUR_KLEE_HEADER> \
         -DRUNTIME_CFLAGS="-O0 -fno-discard-value-names" ..
 ```
 Note: if you do not wish to install the posix file system library, please omit the `-DCMAKE_INSTALL_PREFIX` option.
 
-Note: we will build the POSIX file system model for both KLEE and our engine LLSC. So the user should provide the engine's external API header file, i.e. `-DLLSC_HEADER_DIR` (the directory where `llsc_client.h` is located) and `-DKLEE_HEADER_DIR` (the directory where `klee.h` is located).
+Note: we will build the POSIX file system model for both KLEE and our engine GENSYM. So the user should provide the engine's external API header file, i.e. `-DGENSYM_HEADER_DIR` (the directory where `gensym_client.h` is located) and `-DKLEE_HEADER_DIR` (the directory where `klee.h` is located).
 
 Note: we use `-DRUNTIME_CFLAGS` to pass optimization flags to `clang`, which produces bitcode files of source programs.
 By default, we disable optimization by passing `-O0 -fno-discard-value-names`.
@@ -114,7 +114,7 @@ If you wish to disable assertions, you can pass `-DNDEBUG` in addition.
 ```bash
 $ make # or make install
 ```
-The archived posix-filesystem `libkleeRuntimePOSIX64.bca` (for KLEE) and  `libllscRuntimePOSIX64.bca` (for LLSC) will be generated under `build/runtime/lib`, and `<YOUR_INSTALL_PATH_PREFIX>/lib` (if user specifies `-DCMAKE_INSTALL_PREFIX`).
+The archived posix-filesystem `libkleeRuntimePOSIX64.bca` (for KLEE) and  `libgensymRuntimePOSIX64.bca` (for GENSYM) will be generated under `build/runtime/lib`, and `<YOUR_INSTALL_PATH_PREFIX>/lib` (if user specifies `-DCMAKE_INSTALL_PREFIX`).
 
 ### Step 3: Building the uClibc library
 
@@ -238,7 +238,7 @@ fs-linker --posix-path=${dir_to_posix_archive}/libkleeRuntimePOSIX64.bca \
 Since we have already produced the program with the POSIX/uClibc library, we
 do not need to specify these options when running KLEE.
 We need to use `--switch-type=simple` to lower `switch` instructions into
-branches, to make sure that both KLEE and LLSC treats `switch` in the same way:
+branches, to make sure that both KLEE and GENSYM treats `switch` in the same way:
 
 ```bash
 klee --switch-type=simple echo_klee.ll --sym-stdout --sym-arg 8
@@ -246,14 +246,14 @@ klee --switch-type=simple echo_klee.ll --sym-stdout --sym-arg 8
 
 KLEE should explore 4971 paths after running the above command. For more details on testing Coreutils programs with KLEE, please refer to [KLEE's document](https://klee.github.io/tutorials/testing-coreutils/).
 
-- Using LLSC with KLEE's POSIX model
+- Using GENSYM with KLEE's POSIX model
 
-To test Coreutils bitcode programs using LLSC, we need to link the program with
-the POSIX file system (with LLSC's external API) and the uClibc library again using
+To test Coreutils bitcode programs using GENSYM, we need to link the program with
+the POSIX file system (with GENSYM's external API) and the uClibc library again using
 the `fs-linker` program:
 
 ```bash
-fs-linker --posix-path=${dir_to_posix_archive}/libllscRuntimePOSIX64.bca \
+fs-linker --posix-path=${dir_to_posix_archive}/libgensymRuntimePOSIX64.bca \
           --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a \
           --switch-type=simple \
           ./echo.bc -o echo_linked.ll
@@ -261,43 +261,43 @@ fs-linker --posix-path=${dir_to_posix_archive}/libllscRuntimePOSIX64.bca \
 
 Then we generate the symbolic-execution code for `echo_linked.ll` under the interactive `sbt` console:
 ```
-sbt:SAI> runMain sai.llsc.RunLLSC <path-to-echo_linked.ll> --entrance=main --output=echo_linked_posix --use-argv
+sbt:SAI> runMain sai.gensym.RunGenSym <path-to-echo_linked.ll> --entrance=main --output=echo_linked_posix --use-argv
 ```
 
-And after running `make` under `llsc_gen/echo_linked_posix`, we can invoke the compiled executable file:
+And after running `make` under `gs_gen/echo_linked_posix`, we can invoke the compiled executable file:
 ```
-# current directory sai/dev-clean/llsc_gen/echo_linked_posix
+# current directory sai/dev-clean/gs_gen/echo_linked_posix
 make
 ./echo_linked_posix --cons-indep --argv="./echo.bc --sym-stdout --sym-arg 8"
 ```
 
 You should observe same path number 4971.
 
-- Using LLSC without POSIX
+- Using GENSYM without POSIX
 
-To test Coreutils bitcode files using LLSC with its the internal file system,
+To test Coreutils bitcode files using GENSYM with its the internal file system,
 we only need to link the program with the uClibc library.
 
 ```bash
 fs-linker --uclibc-path=${dir_to_uclibc_folder}/lib/libc.a \
           --switch-type=simple \
-          ./echo.bc -o echo_llsc_linked.ll
+          ./echo.bc -o echo_gensym_linked.ll
 ```
 
-Then we generate the symbolic-execution code for `echo_llsc_linked.ll` under the interactive `sbt` console:
+Then we generate the symbolic-execution code for `echo_gensym_linked.ll` under the interactive `sbt` console:
 ```
-sbt:SAI> runMain sai.llsc.RunLLSC <path-to-echo_llsc_linked.ll> --entrance=main --output=echo_llsc_fs --use-argv
+sbt:SAI> runMain sai.gensym.RunGenSym <path-to-echo_gensym_linked.ll> --entrance=main --output=echo_gensym_fs --use-argv
 ```
 
-And after running `make` under `llsc_gen/echo_llsc_fs`, we can invoke the compiled executable file:
+And after running `make` under `gs_gen/echo_gensym_fs`, we can invoke the compiled executable file:
 ```
-# current directory sai/dev-clean/llsc_gen/echo_llsc_fs
+# current directory sai/dev-clean/gs_gen/echo_gensym_fs
 make
-./echo_llsc_fs --cons-indep --argv="./echo.bc #{8}"
+./echo_gensym_fs --cons-indep --argv="./echo.bc #{8}"
 ```
 
 You should observe same path number 4971.
 
 #### Measuring coverage with `gcov`
 
-This feature is still under development for LLSC. Please refer to [Testing Coreutils](https://klee.github.io/tutorials/testing-coreutils/) about testing with `gcov` in KLEE.
+This feature is still under development for GENSYM. Please refer to [Testing Coreutils](https://klee.github.io/tutorials/testing-coreutils/) about testing with `gcov` in KLEE.
